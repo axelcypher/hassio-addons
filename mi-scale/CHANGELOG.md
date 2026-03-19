@@ -1,3 +1,15 @@
+## 0.3.8
+
+- add GitHub Actions workflow to build and publish multi-arch image to GitHub Container Registry (GHCR)
+- switch add-on image reference to GHCR image used by this repository
+- update documentation for fork-based installation and maintainer attribution while crediting original author
+
+## [0.3.7] - 2026-03-19
+### Changed
+- Switched BLE scanning from local D-Bus/Bleak adapter access to Home Assistant's Bluetooth proxy websocket API.
+- Updated add-on metadata to use `homeassistant_api` instead of `host_dbus`.
+- Deprecated and ignored `HCI_DEV` and `BLUEPY_PASSIVE_SCAN` options.
+
 ## [0.3.6] - 2022-10-10
 ### Added
 - Added apparmor Security to support Supervised Installation. (Fixes [67](https://github.com/lolouk44/hassio-addons/issues/67) - Thanks @MariusHerget)

@@ -2,13 +2,11 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import binascii
-from bleak import BleakScanner
 from collections import namedtuple
 from datetime import datetime
-import functools
 import json
+import aiohttp
 import paho.mqtt.publish as publish
-import subprocess
 import sys
 import logging
 import os
@@ -16,7 +14,8 @@ import os
 import Xiaomi_Scale_Body_Metrics
 
 DEFAULT_DEBUG_LEVEL = "INFO"
-VERSION = "0.3.6"
+VERSION = "0.3.7"
+SUPERVISOR_WS_URL = "ws://supervisor/core/websocket"
 
 
 
@@ -241,18 +240,14 @@ try:
                 MQTT_DISCOVERY_PREFIX = "homeassistant"
             pass
         try:
-            HCI_DEV = data["HCI_DEV"].lower()
-            logging.debug(f"HCI_DEV read from config: {HCI_DEV}")
+            data["HCI_DEV"]
+            logging.info("HCI_DEV option is deprecated and ignored when using Home Assistant Bluetooth proxy...")
         except:
-            HCI_DEV = "hci0"
-            logging.debug(f"HCI_DEV defaulted to: {HCI_DEV}")
             pass
         try:
-            BLUEPY_PASSIVE_SCAN = data["BLUEPY_PASSIVE_SCAN"]
-            logging.debug(f"BLUEPY_PASSIVE_SCAN read from config: {BLUEPY_PASSIVE_SCAN}")
+            data["BLUEPY_PASSIVE_SCAN"]
+            logging.info("BLUEPY_PASSIVE_SCAN option is deprecated and ignored when using Home Assistant Bluetooth proxy...")
         except:
-            BLUEPY_PASSIVE_SCAN = False
-            logging.debug(f"BLUEPY_PASSIVE_SCAN defaulted to: {BLUEPY_PASSIVE_SCAN}")
             pass
 
         if MQTT_TLS_CACERTS in [None, '', 'Path to CA Cert File']:
@@ -289,62 +284,83 @@ except FileNotFoundError as error:
 
 
 async def main(MISCALE_MAC):
-    stop_event = asyncio.Event()
+    global OLD_MEASURE
+    supervisor_token = os.environ.get("SUPERVISOR_TOKEN")
+    if not supervisor_token:
+        raise RuntimeError("SUPERVISOR_TOKEN is missing; cannot connect to Home Assistant Bluetooth proxy websocket")
 
-    # TODO: add something that calls stop_event.set()
+    while True:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.ws_connect(SUPERVISOR_WS_URL, heartbeat=30) as websocket:
+                    hello = await websocket.receive_json()
+                    if hello.get("type") != "auth_required":
+                        raise RuntimeError(f"Unexpected websocket auth handshake: {hello}")
 
-    def callback(device, advertising_data):
-        global OLD_MEASURE
-        if device.address.lower() == MISCALE_MAC:
-            logging.debug(f"miscale found, with advertising_data: {advertising_data}")
-            try:
-                ### Xiaomi V2 Scale ###
-                data = binascii.b2a_hex(advertising_data.service_data['0000181b-0000-1000-8000-00805f9b34fb']).decode('ascii')
-                logging.debug(f"miscale v2 found (service data: 0000181b-0000-1000-8000-00805f9b34fb)")
-                data = "1b18" + data # Remnant from previous code. Needs to be cleaned in the future
-                data2 = bytes.fromhex(data[4:])
-                ctrlByte1 = data2[1]
-                isStabilized = ctrlByte1 & (1<<5)
-                hasImpedance = ctrlByte1 & (1<<1)
-                measunit = data[4:6]
-                measured = int((data[28:30] + data[26:28]), 16) * 0.01
-                unit = ''
-                if measunit == "03": unit = 'lbs'
-                if measunit == "02": unit = 'kg' ; measured = measured / 2
-                miimpedance = str(int((data[24:26] + data[22:24]), 16))
-                if unit and isStabilized:
-                    if OLD_MEASURE != round(measured, 2) + int(miimpedance):
-                        OLD_MEASURE = round(measured, 2) + int(miimpedance)
-                        MQTT_publish(round(measured, 2), unit, str(datetime.now().strftime('%Y-%m-%dT%H:%M:%S+00:00')), hasImpedance, miimpedance)
-            except:
-                pass
-            try:
-                ### Xiaomi V1 Scale ###
-                data = binascii.b2a_hex(advertising_data.service_data['0000181d-0000-1000-8000-00805f9b34fb']).decode('ascii')
-                logging.debug(f"miscale v1 found (service data: 0000181d-0000-1000-8000-00805f9b34fb)")
-                data = "1d18" + data # Remnant from previous code. Needs to be cleaned in the future
-                measunit = data[4:6]
-                measured = int((data[8:10] + data[6:8]), 16) * 0.01
-                unit = ''
-                if measunit.startswith(('03', 'a3')): unit = 'lbs'
-                if measunit.startswith(('12', 'b2')): unit = 'jin'
-                if measunit.startswith(('22', 'a2')): unit = 'kg' ; measured = measured / 2
-                if unit:
-                    if OLD_MEASURE != round(measured, 2):
-                        OLD_MEASURE = round(measured, 2)
-                        MQTT_publish(round(measured, 2), unit, str(datetime.now().strftime('%Y-%m-%dT%H:%M:%S+00:00')), "", "")
-            except:
-                pass
-        pass
+                    await websocket.send_json({"type": "auth", "access_token": supervisor_token})
+                    auth_result = await websocket.receive_json()
+                    if auth_result.get("type") != "auth_ok":
+                        raise RuntimeError(f"Websocket authentication failed: {auth_result}")
 
-    async with BleakScanner(
-        callback,
-        device=f"{HCI_DEV}"
-    ) as scanner:
-        ...
-        # Important! Wait for an event to trigger stop, otherwise scanner
-        # will stop immediately.
-        await stop_event.wait()
+                    subscription_id = 1
+                    await websocket.send_json(
+                        {"id": subscription_id, "type": "bluetooth/subscribe_advertisements"}
+                    )
+
+                    while True:
+                        message = await websocket.receive_json()
+                        if message.get("id") == subscription_id and message.get("success") is False:
+                            raise RuntimeError(f"Unable to subscribe to bluetooth advertisements: {message}")
+                        if message.get("type") != "event":
+                            continue
+                        event = message.get("event", {})
+                        for advert in event.get("add", []):
+                            address = advert.get("address", "").lower()
+                            if address != MISCALE_MAC:
+                                continue
+                            logging.debug(f"miscale found, with advertising_data: {advert}")
+                            service_data = advert.get("service_data", {})
+                            try:
+                                ### Xiaomi V2 Scale ###
+                                data = service_data['0000181b-0000-1000-8000-00805f9b34fb']
+                                logging.debug(f"miscale v2 found (service data: 0000181b-0000-1000-8000-00805f9b34fb)")
+                                data = "1b18" + data  # Remnant from previous code. Needs to be cleaned in the future
+                                data2 = bytes.fromhex(data[4:])
+                                ctrlByte1 = data2[1]
+                                isStabilized = ctrlByte1 & (1<<5)
+                                hasImpedance = ctrlByte1 & (1<<1)
+                                measunit = data[4:6]
+                                measured = int((data[28:30] + data[26:28]), 16) * 0.01
+                                unit = ''
+                                if measunit == "03": unit = 'lbs'
+                                if measunit == "02": unit = 'kg' ; measured = measured / 2
+                                miimpedance = str(int((data[24:26] + data[22:24]), 16))
+                                if unit and isStabilized:
+                                    if OLD_MEASURE != round(measured, 2) + int(miimpedance):
+                                        OLD_MEASURE = round(measured, 2) + int(miimpedance)
+                                        MQTT_publish(round(measured, 2), unit, str(datetime.now().strftime('%Y-%m-%dT%H:%M:%S+00:00')), hasImpedance, miimpedance)
+                            except:
+                                pass
+                            try:
+                                ### Xiaomi V1 Scale ###
+                                data = service_data['0000181d-0000-1000-8000-00805f9b34fb']
+                                logging.debug(f"miscale v1 found (service data: 0000181d-0000-1000-8000-00805f9b34fb)")
+                                data = "1d18" + data # Remnant from previous code. Needs to be cleaned in the future
+                                measunit = data[4:6]
+                                measured = int((data[8:10] + data[6:8]), 16) * 0.01
+                                unit = ''
+                                if measunit.startswith(('03', 'a3')): unit = 'lbs'
+                                if measunit.startswith(('12', 'b2')): unit = 'jin'
+                                if measunit.startswith(('22', 'a2')): unit = 'kg' ; measured = measured / 2
+                                if unit:
+                                    if OLD_MEASURE != round(measured, 2):
+                                        OLD_MEASURE = round(measured, 2)
+                                        MQTT_publish(round(measured, 2), unit, str(datetime.now().strftime('%Y-%m-%dT%H:%M:%S+00:00')), "", "")
+                            except:
+                                pass
+        except Exception as error:
+            logging.error(f"Bluetooth proxy connection failed, retrying in 10 seconds: {error}")
+            await asyncio.sleep(10)
 
         
 if __name__ == "__main__":

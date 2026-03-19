@@ -1,5 +1,6 @@
-[![version](https://img.shields.io/github/v/release/lolouk44/hassio-addons)](https://github.com/lolouk44/hassio-addons/releases)
+[![version](https://img.shields.io/github/v/release/hassio-addons/hassio-addons)](../../releases)
 [![ha_badge](https://img.shields.io/badge/Home%20Assistant-Add%20On-blue.svg)](https://www.home-assistant.io/)
+
 # Home Assistant Add-on: Xiaomi Mi Scale
 
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
@@ -13,7 +14,17 @@
 ![armv7-shield]
 ![i386-shield]
 
-Reads weight measurements from Xiaomi Body Scales via Bluetooth. See [Documentation](https://github.com/lolouk44/hassio-addons/tree/master/mi-scale/DOCS.md) for installation instructions
+Reads weight measurements from Xiaomi Body Scales via Bluetooth. See [Documentation](./DOCS.md) for full setup and configuration.
 
-## About
-This Add-on for [Home Assistant](https://www.home-assistant.io/) connects via Bluetooth Low Energy (BLE) to Xiaomi Bathroom Scales to read weight measurements from the device, including Body Mass Index (BMI), basal metabolism, visceral fat, lean body mass, body fat, water amount, bone mass, muscle mass, protein amount, body type, weight category, and metabolic age.
+## Installation
+Add your own fork URL in Home Assistant (for example `https://github.com/axelcypher/hassio-addons`) and install the **Xiaomi Mi Scale** add-on from there.
+
+## Image build & publish
+This repository includes a GitHub Actions workflow that builds and publishes a multi-arch image to:
+
+`ghcr.io/axelcypher/xiaomi-mi-scale-ha-add-on`
+
+The add-on config is set to use that GHCR image format.
+
+## Credit
+Original add-on author: [@lolouk44](https://github.com/lolouk44).
