@@ -3,7 +3,7 @@ name: Build and publish Mi Scale image
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'mi-scale/**'
       - '.github/workflows/main.yml'
@@ -22,6 +22,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Read add-on version
+        id: addon
+        run: |
+          VERSION=$(jq -r '.version' mi-scale/config.json)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -43,6 +49,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/xiaomi-mi-scale-ha-add-on
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.addon.outputs.version }}
             type=ref,event=tag
             type=ref,event=branch
 

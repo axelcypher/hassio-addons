@@ -13,7 +13,7 @@ Name | Model | Picture
 
 
 1. Open Home Assistant and navigate to the "Add-on Store". Click on the 3 dots (top right) and select "Repositories".
-2. Enter the URL of your fork of this repository (for example `https://github.com/<your-user>/hassio-addons`) in the box and click on "Add".
+2. Enter the URL of your fork of this repository (for example `https://github.com/axelcypher/hassio-addons`) in the box and click on "Add".
 3. You should now see your add-on repository at the bottom list.
 4. Click on "Xiaomi Mi Scale", then click "Install".
 5. Under the "Configuration" tab, change the settings appropriately (at least MQTT parameters, user properties, and MAC address), see [Parameters](#parameters).
