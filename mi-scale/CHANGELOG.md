@@ -1,3 +1,9 @@
+## 0.3.8
+
+- add GitHub Actions workflow to build and publish multi-arch image to GitHub Container Registry (GHCR)
+- switch add-on image reference to GHCR image used by this repository
+- update documentation for fork-based installation and maintainer attribution while crediting original author
+
 ## [0.3.7] - 2026-03-19
 ### Changed
 - Switched BLE scanning from local D-Bus/Bleak adapter access to Home Assistant's Bluetooth proxy websocket API.
