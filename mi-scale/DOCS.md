@@ -13,26 +13,18 @@ Name | Model | Picture
 
 
 1. Open Home Assistant and navigate to the "Add-on Store". Click on the 3 dots (top right) and select "Repositories".
-2. Enter `https://github.com/lolouk44/hassio-addons` in the box and click on "Add".
-3. You should now see "Lolouk44 Add-Ons" at the bottom list.
+2. Enter the URL of your fork of this repository (for example `https://github.com/<your-user>/hassio-addons`) in the box and click on "Add".
+3. You should now see your add-on repository at the bottom list.
 4. Click on "Xiaomi Mi Scale", then click "Install".
 5. Under the "Configuration" tab, change the settings appropriately (at least MQTT parameters, user properties, and MAC address), see [Parameters](#parameters).
 6. Start the Add-on.
 
 ## Important:
-If using the Add-On outside of Home Assistant Operating System / through a docker container, make sure the dbus is shared with the container running Home Assistant. This is typically done by adding the following line in your docker run command:
-`-v /var/run/dbus/:/var/run/dbus/:ro`
-or the following lines in your docker-compose file:
-```
-    volumes:
-      - /var/run/dbus/:/var/run/dbus/:ro
-```
+This add-on now listens for BLE advertisements through the Home Assistant Bluetooth proxy websocket API (`/core/websocket`) instead of directly reading the host D-Bus adapter.
 
 ## Parameters
 Option | Type | Required | Description
 --- | --- | --- | ---
-HCI_DEV | string | No | Bluetooth hci device to use. Defaults to `hci0`
-BLUEPY_PASSIVE_SCAN | bool | No | Try to set to true if getting an error like `Bluetooth connection error: Failed to execute management command ‘le on’` on a Raspberry Pi. Defaults to `false`
 MISCALE_MAC | string | Yes | MAC address of your scale
 MQTT_PREFIX | string | No | MQTT topic prefix, defaults to `miscale`
 MQTT_HOST | string | Yes | MQTT server, defaults to `127.0.0.1`
@@ -93,5 +85,10 @@ mqtt:
 
 
 
+## Maintainer
+This fork and release automation are maintained by this repository owner.
+
 # Acknowledgements
+Original add-on author: [@lolouk44](https://github.com/lolouk44).
+
 Thanks to @syssi (https://gist.github.com/syssi/4108a54877406dc231d95514e538bde9) and @prototux (https://github.com/wiecosystem/Bluetooth) for their initial code. Special thanks to [@ned-kelly](https://github.com/ned-kelly) for his help turning a "simple" Python script into a fully fledged Docker container. Thanks to [@bpaulin](https://github.com/bpaulin), [@fabir-git](https://github.com/fabir-git), [@snozzley](https://github.com/snozzley), [CodeFinder2](https://github.com/CodeFinder2) [@MariusHerget](https://github.com/MariusHerget) for their PRs and collaboration.

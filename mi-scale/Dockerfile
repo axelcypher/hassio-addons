@@ -1,13 +1,11 @@
 FROM python:3.9-slim
-LABEL io.hass.version="0.3.6" io.hass.type="addon" io.hass.arch="armhf|aarch64|i386|amd64"
+LABEL io.hass.version="0.3.7" io.hass.type="addon" io.hass.arch="armhf|aarch64|i386|amd64"
 WORKDIR /opt/miscale
 COPY src /opt/miscale
 
 RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
-    bluez \
-    python3-pip \
-    libglib2.0-dev && \
+    python3-pip && \
     rm -rf /var/lib/apt/lists/*
 
 RUN pip install -r requirements.txt
