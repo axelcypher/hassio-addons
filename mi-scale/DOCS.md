@@ -20,19 +20,11 @@ Name | Model | Picture
 6. Start the Add-on.
 
 ## Important:
-If using the Add-On outside of Home Assistant Operating System / through a docker container, make sure the dbus is shared with the container running Home Assistant. This is typically done by adding the following line in your docker run command:
-`-v /var/run/dbus/:/var/run/dbus/:ro`
-or the following lines in your docker-compose file:
-```
-    volumes:
-      - /var/run/dbus/:/var/run/dbus/:ro
-```
+This add-on now listens for BLE advertisements through the Home Assistant Bluetooth proxy websocket API (`/core/websocket`) instead of directly reading the host D-Bus adapter.
 
 ## Parameters
 Option | Type | Required | Description
 --- | --- | --- | ---
-HCI_DEV | string | No | Bluetooth hci device to use. Defaults to `hci0`
-BLUEPY_PASSIVE_SCAN | bool | No | Try to set to true if getting an error like `Bluetooth connection error: Failed to execute management command ‘le on’` on a Raspberry Pi. Defaults to `false`
 MISCALE_MAC | string | Yes | MAC address of your scale
 MQTT_PREFIX | string | No | MQTT topic prefix, defaults to `miscale`
 MQTT_HOST | string | Yes | MQTT server, defaults to `127.0.0.1`
