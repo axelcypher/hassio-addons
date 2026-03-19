@@ -17,12 +17,12 @@
 Reads weight measurements from Xiaomi Body Scales via Bluetooth. See [Documentation](./DOCS.md) for full setup and configuration.
 
 ## Installation
-Add your own fork URL in Home Assistant (for example `https://github.com/<your-user>/hassio-addons`) and install the **Xiaomi Mi Scale** add-on from there.
+Add your own fork URL in Home Assistant (for example `https://github.com/axelcypher/hassio-addons`) and install the **Xiaomi Mi Scale** add-on from there.
 
 ## Image build & publish
 This repository includes a GitHub Actions workflow that builds and publishes a multi-arch image to:
 
-`ghcr.io/<repo-owner>/xiaomi-mi-scale-ha-add-on`
+`ghcr.io/axelcypher/xiaomi-mi-scale-ha-add-on`
 
 The add-on config is set to use that GHCR image format.
 
